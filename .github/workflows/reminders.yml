@@ -1,5 +1,5 @@
-# Rejam bot (@rejam_uzbot) eslatmalari va hisobotlari: har 5 daqiqada joylangan kodni
-# tgcloud'dan olib, endpoints/runReminders'ni ishga tushiradi. Bot kodi bu repoda yo'q.
+# Rejam botlari (@rejam_uzbot va @RejamUz_bot) eslatmalari va hisobotlari: har 5 daqiqada har bir botning
+# joylangan kodini tgcloud'dan olib, endpoints/runReminders'ni ishga tushiradi. Bot kodi bu repoda yo'q.
 # Log ochiq repoda ko'rinadi — shuning uchun faqat OK/FAIL chiqariladi.
 name: reminders
 
@@ -19,7 +19,7 @@ permissions:
 jobs:
   tick:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 8
     steps:
       - uses: actions/setup-node@v4
         with:
@@ -28,11 +28,23 @@ jobs:
       - name: tgcloud CLI
         run: npm install -g @tgcloud/cli@0.2.0 --silent --no-audit --no-fund > /dev/null 2>&1
 
-      - name: runReminders
+      - name: runReminders (rejam_uzbot)
         env:
           TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN }}
         run: |
           mkdir work && cd work
+          tgcloud pull --force > /dev/null 2>&1 || { echo "FAIL: pull"; exit 1; }
+          tgcloud run endpoints/runReminders '{}' > out.txt 2>&1 || true
+          if grep -q "ok:true" out.txt; then echo "OK"; else echo "FAIL: run"; exit 1; fi
+
+      # Ikkinchi bot — birinchisi xato bersa ham ishlaydi; kalit qo'yilmagan bo'lsa o'tkazib yuboriladi
+      - name: runReminders (RejamUz_bot)
+        if: always()
+        env:
+          TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN_2 }}
+        run: |
+          [ -n "$TGCLOUD_TOKEN" ] || { echo "SKIP: TGCLOUD_TOKEN_2 yo'q"; exit 0; }
+          mkdir work2 && cd work2
           tgcloud pull --force > /dev/null 2>&1 || { echo "FAIL: pull"; exit 1; }
           tgcloud run endpoints/runReminders '{}' > out.txt 2>&1 || true
           if grep -q "ok:true" out.txt; then echo "OK"; else echo "FAIL: run"; exit 1; fi
